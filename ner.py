@@ -6,9 +6,8 @@ from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.preprocessing import LabelBinarizer
 import sklearn
 import pycrfsuite
-# import re
 
-modelname='model/ner.model'
+modelname='model/tk_ner.model'
 # train_file='example.train'
 # test_file='example.test'
 
@@ -22,36 +21,18 @@ X_test=[]
 y_test=[]
 
 
-# print(train_sents[0])
-# [('Melbourne', 'NP', 'B-LOC'),
-# ('(', 'Fpa', 'O'),
-# ('Australia', 'NP', 'B-LOC'),
-# (')', 'Fpt', 'O'),
-# (',', 'Fc', 'O'),
-# ('25', 'Z', 'O'),
-# ('may', 'NC', 'O'),
-# ('(', 'Fpa', 'O'),
-# ('EFE', 'NC', 'B-ORG'),
-# (')', 'Fpt', 'O'),
-# ('.', 'Fp', 'O')]
-
 def word2features(sent, i):
-    #print(sent)
+
     word = sent[i][0]
     cuttag = sent[i][1]
     postag = sent[i][2]
     features = [
         'bias',
-        'word='+word,
-       # 'word.lower=' + word.lower(),
-       # 'word[-3:]=' + word[-3:],
-        #'word[-2:]=' + word[-2:],
-       # 'word.isupper=%s' % word.isupper(),
-        #'word.istitle=%s' % word.istitle(),
+        'word='+ word,
         'word.isdigit=%s' % word.isdigit(),
         'postag=' + postag,
         'cuttag=' + cuttag,
-       # 'postag[:2]=' + postag[:2],
+
     ]
     if i > 0:
         word1 = sent[i - 1][0]
@@ -96,44 +77,40 @@ def sent2tokens(sent):
 
 
 # 加载数据
-def load(train_file='corpus/example.train',test_file='corpus/example.test'):
+def load(train_file='test/tk_filter_train.txt',test_file='test/tk_filter_test.txt'):
     global train_sents, test_sents,X_train,y_train,X_test,y_test
 
     train_sents=format.load_data(train_file)
     test_sents=format.load_data(test_file)
-    # train_sents = list(nltk.corpus.conll2002.iob_sents('esp.train'))
-    # test_sents = list(nltk.corpus.conll2002.iob_sents('esp.testb'))
 
     X_train = [sent2features(s) for s in train_sents]
     y_train = [sent2labels(s) for s in train_sents]
-    # print(y_train)
+
     X_test = [sent2features(s) for s in test_sents]
     y_test = [sent2labels(s) for s in test_sents]
+    return X_train, y_train, X_test, y_test
 
 # 训练
-def train():
-    # train_sents = list(nltk.corpus.conll2002.iob_sents('esp.train'))
-    # test_sents = list(nltk.corpus.conll2002.iob_sents('esp.testb'))
+def train(X_train, y_train):
 
     trainer = pycrfsuite.Trainer()
 
     for xseq, yseq in zip(X_train, y_train):
         trainer.append(xseq, yseq)
-    # print(xseq)
-    # print(yseq)
     trainer.set_params({
         'c1': 1.0,   # coefficient for L1 penalty
         'c2': 1e-3,  # coefficient for L2 penalty
-        'max_iterations': 50,  # stop earlier
-
+        'max_iterations': 50,  # 迭代次数
+        # 'max_linesearch':100,
         # include transitions that are possible, but not observed
         'feature.possible_transitions': True
     })
     trainer.train(modelname)
 
-def tagger():
+def tagger(X_test, y_test):
 
     tagger = pycrfsuite.Tagger()
+    # modelname = 'model/ner.model'
     tagger.open(modelname)
     example_sent = test_sents[0]
 
@@ -156,8 +133,9 @@ def ner(text):
     tagger.open(modelname)
     sent=format.split_by_words(text)
     tag_result=tagger.tag(sent2features(sent))
+    result_prob = tagger.probability(tag_result)
     text_result=format.format_boson_data_encode(text,tag_result)
-    return text_result
+    return text_result, result_prob
 
 # 评估系统准确率。
 # 评价是按照多分类任务进行的，计算单位是每一个汉字。所以按实体为单位计算的真实F1值可能比该值低一些。
@@ -182,6 +160,14 @@ def bio_classification_report(y_true, y_pred):
 
 
 if __name__ == '__main__':
-    load()
-    # train()
-    # tagger()
+
+
+    train_file = 'test/tk_train.txt'
+    test_file = 'test/tk_test.txt'
+    X_train, y_train, X_test, y_test = load(train_file, test_file)
+    print("a")
+    # train(X_train, y_train)
+    # result, prob = ner('王亚平是中国第一位进入太空的女航天员。2021年9月10号是教师节')
+    # print(f"结果为{result}，概率为{prob}")
+    #
+    # tagger(X_test, y_test)

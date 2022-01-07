@@ -26,7 +26,7 @@ if __name__ == '__main__':
             input_file_path=sys.argv[3]
             output_file_path=sys.argv[4]
             input_file=open(input_file_path,'r',encoding='utf-8')
-            result=ner.ner(input_file.read())
+            result, prob=ner.ner(input_file.read())
 
             output_file= open(output_file_path,'w',encoding='utf-8')
             try:

@@ -156,7 +156,7 @@ def load_data(path):
     try:
 
         lines=file.readlines()
-        # print(lines)
+
         res_line=list()
         for item in lines:
             if item.split(' ').__len__()>=2:
